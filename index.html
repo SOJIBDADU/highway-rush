@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Highway Rush</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    font-family:Arial,sans-serif;
+    background:#111;
+    touch-action:none;
+}
+
+#game{
+    position:relative;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+}
+
+canvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+}
+
+#hud{
+    position:absolute;
+    top:12px;
+    left:10px;
+    right:10px;
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    z-index:5;
+    pointer-events:none;
+}
+
+.hudBox{
+    min-width:80px;
+    padding:7px 10px;
+    background:rgba(0,0,0,.65);
+    color:white;
+    border-radius:10px;
+    text-align:center;
+    font-size:11px;
+}
+
+.hudBox strong{
+    display:block;
+    font-size:17px;
+    margin-top:3px;
+}
+
+#nitroBox{
+    position:absolute;
+    top:72px;
+    left:50%;
+    transform:translateX(-50%);
+    width:180px;
+    z-index:5;
+}
+
+#nitroTitle{
+    color:white;
+    text-align:center;
+    font-size:11px;
+    margin-bottom:4px;
+}
+
+#nitroBar{
+    width:100%;
+    height:9px;
+    background:rgba(0,0,0,.6);
+    border-radius:20px;
+    overflow:hidden;
+}
+
+#nitroFill{
+    width:100%;
+    height:100%;
+    background:#fff;
+}
+
+.screen{
+    position:absolute;
+    inset:0;
+    z-index:20;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color:white;
+    background:rgba(0,0,0,.65);
+    padding:20px;
+}
+
+.hidden{
+    display:none !important;
+}
+
+.title{
+    font-size:clamp(42px,13vw,78px);
+    font-weight:900;
+    line-height:.85;
+    letter-spacing:3px;
+    margin-bottom:22px;
+}
+
+.subtitle{
+    max-width:430px;
+    color:#ddd;
+    line-height:1.5;
+}
+
+.mainButton{
+    margin-top:22px;
+    padding:15px 30px;
+    border:0;
+    border-radius:12px;
+    background:white;
+    color:#111;
+    font-size:18px;
+    font-weight:900;
+    cursor:pointer;
+}
+
+#controls{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:20px;
+    z-index:10;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 18px;
+    pointer-events:none;
+}
+
+.controlButton{
+    width:72px;
+    height:72px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,.55);
+    background:rgba(0,0,0,.55);
+    color:white;
+    font-size:29px;
+    font-weight:bold;
+    pointer-events:auto;
+    user-select:none;
+}
+
+#nitroButton{
+    width:64px;
+    height:64px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,.55);
+    background:rgba(255,255,255,.18);
+    color:white;
+    font-size:25px;
+    pointer-events:auto;
+    user-select:none;
+}
+
+.controlButton:active,
+#nitroButton:active,
+.mainButton:active{
+    transform:scale(.94);
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+<canvas id="canvas"></canvas>
+
+<div id="hud">
+
+    <div class="hudBox">
+        SCORE
+        <strong id="score">0</strong>
+    </div>
+
+    <div class="hudBox">
+        COINS
+        <strong id="coins">0</strong>
+    </div>
+
+    <div class="hudBox">
+        SPEED
+        <strong>
+            <span id="speed">0</span> KM/H
+        </strong>
+    </div>
+
+</div>
+
+<div id="nitroBox">
+
+    <div id="nitroTitle">NITRO</div>
+
+    <div id="nitroBar">
+        <div id="nitroFill"></div>
+    </div>
+
+</div>
+
+<!-- START SCREEN -->
+
+<div id="startScreen" class="screen">
+
+    <div class="title">
+        HIGHWAY<br>RUSH
+    </div>
+
+    <div class="subtitle">
+        Dodge traffic, collect coins and use nitro
+        to get the highest score!
+    </div>
+
+    <button
+        id="startButton"
+        class="mainButton">
+        START GAME
+    </button>
+
+    <div class="subtitle" style="margin-top:18px;">
+        Mobile: Use the buttons<br>
+        PC: Arrow Keys / A / D<br>
+        Nitro: Space
+    </div>
+
+</div>
+
+<!-- GAME OVER SCREEN -->
+
+<div id="gameOverScreen" class="screen hidden">
+
+    <h1 style="font-size:42px;">
+        GAME OVER
+    </h1>
+
+    <p style="margin-top:12px;">
+        Your Score
+    </p>
+
+    <h2
+        id="finalScore"
+        style="font-size:40px;margin-top:5px;">
+        0
+    </h2>
+
+    <button
+        id="restartButton"
+        class="mainButton">
+        PLAY AGAIN
+    </button>
+
+</div>
+
+<!-- CONTROLS -->
+
+<div id="controls">
+
+    <button
+        id="leftButton"
+        class="controlButton">
+        ◀
+    </button>
+
+    <button
+        id="nitroButton">
+        ⚡
+    </button>
+
+    <button
+        id="rightButton"
+        class="controlButton">
+        ▶
+    </button>
+
+</div>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let W = 0;
+let H = 0;
+
+let gameRunning = false;
+let lastTime = 0;
+
+let score = 0;
+let coinCount = 0;
+let gameSpeed = 100;
+let nitro = 100;
+
+let roadMove = 0;
+let trafficTimer = 0;
+let coinTimer = 0;
+
+let traffic = [];
+let coinObjects = [];
+
+const keys = {
+    left:false,
+    right:false,
+    nitro:false
+};
+
+const player = {
+    x:0,
+    y:0,
+    width:50,
+    height:88,
+    velocity:0
+};
+
+
+/* ==========================
+   RESIZE
+========================== */
+
+function resizeGame(){
+
+    W = window.innerWidth;
+    H = window.innerHeight;
+
+    const dpr =
+        Math.min(
+            window.devicePixelRatio || 1,
+            2
+        );
+
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+
+    ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+    );
+
+    player.y = H * .78;
+
+    if(!gameRunning){
+        player.x = W / 2;
+    }
+}
+
+window.addEventListener(
+    "resize",
+    resizeGame
+);
+
+
+/* ==========================
+   ROAD
+========================== */
+
+function roadData(){
+
+    const topWidth =
+        Math.min(W * .55,430);
+
+    const bottomWidth =
+        Math.min(W * .95,720);
+
+    return {
+        topX:(W-topWidth)/2,
+        topWidth:topWidth,
+        bottomX:(W-bottomWidth)/2,
+        bottomWidth:bottomWidth
+    };
+}
+
+function roadEdges(y){
+
+    const road = roadData();
+
+    const t =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                y / H
+            )
+        );
+
+    const left =
+        road.topX +
+        (road.bottomX-road.topX)*t;
+
+    const right =
+        road.topX+
+        road.topWidth+
+        (
+            road.bottomX+
+            road.bottomWidth-
+            road.topX-
+            road.topWidth
+        )*t;
+
+    return {
+        left:left,
+        right:right
+    };
+}
+
+function laneX(lane,y){
+
+    const edges = roadEdges(y);
+
+    const laneWidth =
+        (edges.right-edges.left)/3;
+
+    return (
+        edges.left+
+        laneWidth*(lane+.5)
+    );
+}
+
+
+/* ==========================
+   DRAW ROAD
+========================== */
+
+function drawRoad(){
+
+    ctx.fillStyle="#63a35a";
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+    const road = roadData();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        road.topX,
+        0
+    );
+
+    ctx.lineTo(
+        road.topX+
+        road.topWidth,
+        0
+    );
+
+    ctx.lineTo(
+        road.bottomX+
+        road.bottomWidth,
+        H
+    );
+
+    ctx.lineTo(
+        road.bottomX,
+        H
+    );
+
+    ctx.closePath();
+
+    ctx.fillStyle="#34383d";
+
+    ctx.fill();
+
+
+    /* Road borders */
+
+    ctx.strokeStyle="white";
+    ctx.lineWidth=5;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        road.topX,
+        0
+    );
+
+    ctx.lineTo(
+        road.bottomX,
+        H
+    );
+
+    ctx.moveTo(
+        road.topX+
+        road.topWidth,
+        0
+    );
+
+    ctx.lineTo(
+        road.bottomX+
+        road.bottomWidth,
+        H
+    );
+
+    ctx.stroke();
+
+
+    /* Lane markings */
+
+    ctx.strokeStyle="#ddd";
+    ctx.lineWidth=4;
+
+    const dash=35;
+    const gap=45;
+    const period=dash+gap;
+
+    const offset =
+        roadMove % period;
+
+    for(
+        let lane=1;
+        lane<=2;
+        lane++
+    ){
+
+        for(
+            let y=-period+offset;
+            y<H;
+            y+=period
+        ){
+
+            const y2 =
+                Math.min(
+                    y+dash,
+                    H
+                );
+
+            const x1 =
+                laneX(
+                    lane-.5,
+                    y
+                );
+
+            const x2 =
+                laneX(
+                    lane-.5,
+                    y2
+                );
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                x1,
+                y
+            );
+
+            ctx.lineTo(
+                x2,
+                y2
+            );
+
+            ctx.stroke();
+        }
+    }
+}
+
+
+/* ==========================
+   DRAW CAR
+========================== */
+
+function drawCar(
+    x,
+    y,
+    w,
+    h,
+    color,
+    isPlayer
+){
+
+    ctx.save();
+
+    ctx.translate(x,y);
+
+
+    /* Shadow */
+
+    ctx.fillStyle=
+        "rgba(0,0,0,.3)";
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+        0,
+        h*.43,
+        w*.62,
+        h*.12,
+        0,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+
+    /* Wheels */
+
+    ctx.fillStyle="#111";
+
+    ctx.fillRect(
+        -w*.56,
+        -h*.30,
+        w*.18,
+        h*.28
+    );
+
+    ctx.fillRect(
+        w*.38,
+        -h*.30,
+        w*.18,
+        h*.28
+    );
+
+    ctx.fillRect(
+        -w*.56,
+        h*.04,
+        w*.18,
+        h*.28
+    );
+
+    ctx.fillRect(
+        w*.38,
+        h*.04,
+        w*.18,
+        h*.28
+    );
+
+
+    /* Body */
+
+    ctx.fillStyle=color;
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        -w/2,
+        -h/2,
+        w,
+        h,
+        w*.18
+    );
+
+    ctx.fill();
+
+
+    /* Windows */
+
+    ctx.fillStyle="#263238";
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        -w*.34,
+        -h*.31,
+        w*.68,
+        h*.36,
+        w*.1
+    );
+
+    ctx.fill();
+
+
+    /* Lights */
+
+    ctx.fillStyle=
+        isPlayer
+        ? "#fff3a0"
+        : "#ff4444";
+
+    ctx.fillRect(
+        -w*.38,
+        -h*.44,
+        w*.17,
+        h*.07
+    );
+
+    ctx.fillRect(
+        w*.21,
+        -h*.44,
+        w*.17,
+        h*.07
+    );
+
+
+    ctx.fillStyle=
+        isPlayer
+        ? "#ff3333"
+        : "#fff3a0";
+
+    ctx.fillRect(
+        -w*.37,
+        h*.34,
+        w*.16,
+        h*.07
+    );
+
+    ctx.fillRect(
+        w*.21,
+        h*.34,
+        w*.16,
+        h*.07
+    );
+
+
+    if(isPlayer){
+
+        ctx.fillStyle="white";
+
+        ctx.font=
+            "bold 8px Arial";
+
+        ctx.textAlign="center";
+
+        ctx.fillText(
+            "RUSH",
+            0,
+            h*.22
+        );
+    }
+
+    ctx.restore();
+}
+
+
+/* ==========================
+   TRAFFIC
+========================== */
+
+function spawnTraffic(){
+
+    const lane =
+        Math.floor(
+            Math.random()*3
+        );
+
+    const colors=[
+        "#1976d2",
+        "#eeeeee",
+        "#ff8800",
+        "#8e44ad",
+        "#263238"
+    ];
+
+    const width =
+        player.width*.92;
+
+    const height =
+        width*1.78;
+
+    traffic.push({
+
+        lane:lane,
+
+        x:laneX(
+            lane,
+            -50
+        ),
+
+        y:-height,
+
+        width:width,
+
+        height:height,
+
+        speed:
+            .75+
+            Math.random()*.5,
+
+        color:
+            colors[
+                Math.floor(
+                    Math.random()*
+                    colors.length
+                )
+            ]
+    });
+}
+
+
+/* ==========================
+   COINS
+========================== */
+
+function spawnCoin(){
+
+    const lane =
+        Math.floor(
+            Math.random()*3
+        );
+
+    coinObjects.push({
+
+        lane:lane,
+
+        x:laneX(
+            lane,
+            -20
+        ),
+
+        y:-20,
+
+        radius:10,
+
+        rotation:0
+    });
+}
+
+function drawCoin(c){
+
+    ctx.save();
+
+    ctx.translate(
+        c.x,
+        c.y
+    );
+
+    ctx.rotate(
+        c.rotation
+    );
+
+    ctx.fillStyle="#ffd43b";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        0,
+        0,
+        c.radius,
+        0,
+        Math.PI*2
+    );
+
+    ctx.fill();
+
+    ctx.fillStyle="#7b5200";
+
+    ctx.font=
+        "bold 13px Arial";
+
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+
+    ctx.fillText(
+        "$",
+        0,
+        1
+    );
+
+    ctx.restore();
+}
+
+
+/* ==========================
+   COLLISION
+========================== */
+
+function hit(a,b){
+
+    return (
+
+        Math.abs(
+            a.x-b.x
+        )
+        <
+        (a.width+b.width)*.42
+
+        &&
+
+        Math.abs(
+            a.y-b.y
+        )
+        <
+        (a.height+b.height)*.42
+    );
+}
+
+
+/* ==========================
+   UPDATE
+========================== */
+
+function update(delta){
+
+    const usingNitro =
+        keys.nitro &&
+        nitro>0;
+
+
+    if(usingNitro){
+
+        nitro -=
+            35*delta;
+
+        gameSpeed=260;
+
+    }else{
+
+        nitro +=
+            6*delta;
+
+        gameSpeed=
+            Math.min(
+                240,
+                100+
+                score*.03
+            );
+    }
+
+    nitro=
+        Math.max(
+            0,
+            Math.min(
+                100,
+                nitro
+            )
+        );
+
+
+    /* Steering */
+
+    let direction=0;
+
+    if(keys.left)
+        direction--;
+
+    if(keys.right)
+        direction++;
+
+
+    player.velocity +=
+        direction*
+        1400*
+        delta;
+
+    player.velocity *=
+        Math.pow(
+            .001,
+            delta
+        );
+
+    player.x +=
+        player.velocity*
+        delta;
+
+
+    /* Keep player on road */
+
+    const edges =
+        roadEdges(
+            player.y
+        );
+
+    player.x=
+        Math.max(
+            edges.left+
+            player.width*.6,
+
+            Math.min(
+                edges.right-
+                player.width*.6,
+
+                player.x
+            )
+        );
+
+
+    /* Road movement */
+
+    roadMove +=
+        gameSpeed*
+        delta*
+        1.7;
+
+
+    /* Spawn traffic */
+
+    trafficTimer -= delta;
+
+    if(trafficTimer<=0){
+
+        spawnTraffic();
+
+        trafficTimer=
+            Math.max(
+                .42,
+                .95-
+                score*.0001
+            );
+    }
+
+
+    /* Spawn coins */
+
+    coinTimer -= delta;
+
+    if(coinTimer<=0){
+
+        spawnCoin();
+
+        coinTimer=
+            .75+
+            Math.random()*.7;
+    }
+
+
+    /* Move traffic */
+
+    for(
+        const car of traffic
+    ){
+
+        car.y +=
+            gameSpeed*
+            car.speed*
+            delta;
+
+        car.x=
+            laneX(
+                car.lane,
+                car.y
+            );
+    }
+
+
+    /* Move coins */
+
+    for(
+        const c of coinObjects
+    ){
+
+        c.y +=
+            gameSpeed*
+            delta;
+
+        c.x=
+            laneX(
+                c.lane,
+                c.y
+            );
+
+        c.rotation +=
+            delta*6;
+    }
+
+
+    /* Remove old objects */
+
+    traffic=
+        traffic.filter(
+            car =>
+                car.y<
+                H+120
+        );
+
+    coinObjects=
+        coinObjects.filter(
+            c =>
+                c.y<
+                H+50
+        );
+
+
+    /* Player hitbox */
+
+    const playerBox={
+
+        x:player.x,
+
+        y:player.y,
+
+        width:
+            player.width*.8,
+
+        height:
+            player.height*.8
+    };
+
+
+    /* Check traffic */
+
+    for(
+        const car of traffic
+    ){
+
+        if(
+            hit(
+                playerBox,
+                car
+            )
+        ){
+
+            endGame();
+
+            return;
+        }
+    }
+
+
+    /* Check coins */
+
+    for(
+        let i=
+            coinObjects.length-1;
+
+        i>=0;
+
+        i--
+    ){
+
+        const c=
+            coinObjects[i];
+
+        if(
+
+            Math.abs(
+                player.x-c.x
+            )
+            <
+            player.width
+
+            &&
+
+            Math.abs(
+                player.y-c.y
+            )
+            <
+            player.height
+        ){
+
+            coinCount++;
+
+            score+=50;
+
+            coinObjects.splice(
+                i,
+                1
+            );
+        }
+    }
+
+
+    /* Score */
+
+    score +=
+        delta*
+        (gameSpeed/10);
+
+
+    /* HUD */
+
+    document.getElementById(
+        "score"
+    ).textContent=
+        Math.floor(score);
+
+    document.getElementById(
+        "coins"
+    ).textContent=
+        coinCount;
+
+    document.getElementById(
+        "speed"
+    ).textContent=
+        Math.floor(gameSpeed);
+
+    document.getElementById(
+        "nitroFill"
+    ).style.width=
+        nitro+"%";
+}
+
+
+/* ==========================
+   DRAW
+========================== */
+
+function draw(){
+
+    drawRoad();
+
+
+    traffic.sort(
+        (a,b)=>
+            a.y-b.y
+    );
+
+
+    for(
+        const car of traffic
+    ){
+
+        drawCar(
+            car.x,
+            car.y,
+            car.width,
+            car.height,
+            car.color,
+            false
+        );
+    }
+
+
+    for(
+        const c of coinObjects
+    ){
+
+        drawCoin(c);
+    }
+
+
+    drawCar(
+        player.x,
+        player.y,
+        player.width,
+        player.height,
+        "#e53935",
+        true
+    );
+}
+
+
+/* ==========================
+   GAME LOOP
+========================== */
+
+function loop(time){
+
+    if(!gameRunning)
+        return;
+
+    const delta=
+        Math.min(
+            (time-lastTime)/1000,
+            .035
+        );
+
+    lastTime=time;
+
+    update(delta);
+
+    draw();
+
+    requestAnimationFrame(loop);
+}
+
+
+/* ==========================
+   START GAME
+========================== */
+
+function startGame(){
+
+    score=0;
+    coinCount=0;
+    gameSpeed=100;
+    nitro=100;
+
+    traffic=[];
+    coinObjects=[];
+
+    roadMove=0;
+
+    trafficTimer=0;
+    coinTimer=0;
+
+    player.x=W/2;
+    player.y=H*.78;
+    player.velocity=0;
+
+    gameRunning=true;
+
+    document
+        .getElementById(
+            "startScreen"
+        )
+        .classList.add(
+            "hidden"
+        );
+
+    document
+        .getElementById(
+            "gameOverScreen"
+        )
+        .classList.add(
+            "hidden"
+        );
+
+    lastTime=
+        performance.now();
+
+    requestAnimationFrame(loop);
+}
+
+
+/* ==========================
+   GAME OVER
+========================== */
+
+function endGame(){
+
+    gameRunning=false;
+
+    document.getElementById(
+        "finalScore"
+    ).textContent=
+        Math.floor(score);
+
+    document
+        .getElementById(
+            "gameOverScreen"
+        )
+        .classList.remove(
+            "hidden"
+        );
+}
+
+
+/* ==========================
+   KEYBOARD
+========================== */
+
+window.addEventListener(
+    "keydown",
+    function(e){
+
+        const key=
+            e.key.toLowerCase();
+
+        if(
+            e.key==="ArrowLeft" ||
+            key==="a"
+        ){
+            keys.left=true;
+        }
+
+        if(
+            e.key==="ArrowRight" ||
+            key==="d"
+        ){
+            keys.right=true;
+        }
+
+        if(
+            e.code==="Space"
+        ){
+
+            keys.nitro=true;
+
+            e.preventDefault();
+        }
+    }
+);
+
+
+window.addEventListener(
+    "keyup",
+    function(e){
+
+        const key=
+            e.key.toLowerCase();
+
+        if(
+            e.key==="ArrowLeft" ||
+            key==="a"
+        ){
+            keys.left=false;
+        }
+
+        if(
+            e.key==="ArrowRight" ||
+            key==="d"
+        ){
+            keys.right=false;
+        }
+
+        if(
+            e.code==="Space"
+        ){
+            keys.nitro=false;
+        }
+    }
+);
+
+
+/* ==========================
+   TOUCH BUTTONS
+========================== */
+
+function holdButton(
+    id,
+    key
+){
+
+    const button=
+        document.getElementById(id);
+
+    button.addEventListener(
+        "pointerdown",
+        function(e){
+
+            e.preventDefault();
+
+            keys[key]=true;
+        }
+    );
+
+    button.addEventListener(
+        "pointerup",
+        function(e){
+
+            e.preventDefault();
+
+            keys[key]=false;
+        }
+    );
+
+    button.addEventListener(
+        "pointercancel",
+        function(){
+
+            keys[key]=false;
+        }
+    );
+
+    button.addEventListener(
+        "pointerleave",
+        function(){
+
+            keys[key]=false;
+        }
+    );
+}
+
+holdButton(
+    "leftButton",
+    "left"
+);
+
+holdButton(
+    "rightButton",
+    "right"
+);
+
+holdButton(
+    "nitroButton",
+    "nitro"
+);
+
+
+/* ==========================
+   BUTTONS
+========================== */
+
+document
+    .getElementById(
+        "startButton"
+    )
+    .addEventListener(
+        "click",
+        startGame
+    );
+
+document
+    .getElementById(
+        "restartButton"
+    )
+    .addEventListener(
+        "click",
+        startGame
+    );
+
+
+/* ==========================
+   INITIALIZE
+========================== */
+
+resizeGame();
+
+drawRoad();
+
+drawCar(
+    player.x,
+    player.y,
+    player.width,
+    player.height,
+    "#e53935",
+    true
+);
+
+</script>
+
+</body>
+</html>
